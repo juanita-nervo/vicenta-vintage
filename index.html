@@ -1338,7 +1338,22 @@
         </ul>
       </div>
     </div>
-    <div class="footer__bottom">© 2025 Vicenta Vintage · Deco &amp; Arte · Hecho con 🌸 en Chacabuco, Buenos Aires</div>
+    <div class="footer__bottom">
+      © 2025 Vicenta Vintage · Deco &amp; Arte · Hecho con 🌸 en Chacabuco, Buenos Aires
+      <br>
+      <button onclick="openAdminLogin()" style="
+        background: none; border: none; cursor: pointer;
+        color: rgba(253,240,235,0.18); font-size: 0.65rem;
+        font-family: var(--sans); letter-spacing: 0.1em;
+        margin-top: 0.5rem; display: inline-block;
+        transition: color 0.3s;
+        text-transform: uppercase;
+      "
+      onmouseover="this.style.color='rgba(253,240,235,0.5)'"
+      onmouseout="this.style.color='rgba(253,240,235,0.18)'">
+        Panel Admin
+      </button>
+    </div>
   </footer>
 
   <!-- WhatsApp FAB -->
@@ -2086,6 +2101,37 @@
       if (e.key === 'Escape')     closeLightbox();
     });
 
+    // Navegación con swipe táctil en el lightbox (móvil)
+    (function() {
+      let swipeStartX = null;
+      let swipeStartY = null;
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const lb = document.getElementById('lightbox');
+        if (!lb) return;
+
+        lb.addEventListener('touchstart', function(e) {
+          swipeStartX = e.touches[0].clientX;
+          swipeStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        lb.addEventListener('touchend', function(e) {
+          if (swipeStartX === null || !lb.classList.contains('open')) return;
+
+          const dx = e.changedTouches[0].clientX - swipeStartX;
+          const dy = e.changedTouches[0].clientY - swipeStartY;
+
+          // Activar solo si el swipe es horizontal (dx > 50px y mayor que dy)
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            lbNav(dx < 0 ? 1 : -1);  // izquierda = siguiente, derecha = anterior
+          }
+
+          swipeStartX = null;
+          swipeStartY = null;
+        }, { passive: true });
+      });
+    })();
+
     document.addEventListener('DOMContentLoaded', () => {
       const lb = document.getElementById('lightbox');
       if (lb) lb.addEventListener('click', function(e) {
@@ -2339,31 +2385,32 @@
     function getPass() { return localStorage.getItem(ADMIN_PASS_KEY) || DEFAULT_PASS; }
 
 
-   /* ============================================================
+    /* ============================================================
        ACCESO ADMIN EN MÓVIL — mantener presionado el logo 2 seg.
        Long press de 2 segundos en el logo → abre login de admin
        En desktop sigue funcionando Ctrl+Shift+A normalmente
     ============================================================ */
     (function() {
       let pressTimer = null;
- 
+
       document.addEventListener('DOMContentLoaded', () => {
         const logoEl = document.querySelector('.nav__logo');
         if (!logoEl) return;
- 
+
         // Iniciar contador al tocar
         logoEl.addEventListener('touchstart', function(e) {
           pressTimer = setTimeout(() => {
             openAdminLogin();
           }, 2000); // 2 segundos
         }, { passive: true });
- 
+
         // Cancelar si suelta antes de los 2 segundos
         logoEl.addEventListener('touchend',    () => clearTimeout(pressTimer));
         logoEl.addEventListener('touchcancel', () => clearTimeout(pressTimer));
         logoEl.addEventListener('touchmove',   () => clearTimeout(pressTimer));
       });
     })();
+
     /* ============================================================
        ADMIN — atajo de teclado (Ctrl+Shift+A → SIEMPRE pide pass)
     ============================================================ */
