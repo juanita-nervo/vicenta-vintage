@@ -2339,33 +2339,31 @@
     function getPass() { return localStorage.getItem(ADMIN_PASS_KEY) || DEFAULT_PASS; }
 
 
-    /* ============================================================
-       ACCESO ADMIN EN MÓVIL — triple tap en el logo del navbar
-       3 taps en menos de 1.2 segundos → abre el login de admin
+   /* ============================================================
+       ACCESO ADMIN EN MÓVIL — mantener presionado el logo 2 seg.
+       Long press de 2 segundos en el logo → abre login de admin
        En desktop sigue funcionando Ctrl+Shift+A normalmente
     ============================================================ */
     (function() {
-      let tapCount = 0;
-      let tapTimer = null;
-
+      let pressTimer = null;
+ 
       document.addEventListener('DOMContentLoaded', () => {
         const logoEl = document.querySelector('.nav__logo');
         if (!logoEl) return;
-
-        logoEl.addEventListener('touchend', function(e) {
-          tapCount++;
-          if (tapTimer) clearTimeout(tapTimer);
-
-          if (tapCount >= 3) {
-            tapCount = 0;
+ 
+        // Iniciar contador al tocar
+        logoEl.addEventListener('touchstart', function(e) {
+          pressTimer = setTimeout(() => {
             openAdminLogin();
-          } else {
-            tapTimer = setTimeout(() => { tapCount = 0; }, 1200);
-          }
-        });
+          }, 2000); // 2 segundos
+        }, { passive: true });
+ 
+        // Cancelar si suelta antes de los 2 segundos
+        logoEl.addEventListener('touchend',    () => clearTimeout(pressTimer));
+        logoEl.addEventListener('touchcancel', () => clearTimeout(pressTimer));
+        logoEl.addEventListener('touchmove',   () => clearTimeout(pressTimer));
       });
     })();
-
     /* ============================================================
        ADMIN — atajo de teclado (Ctrl+Shift+A → SIEMPRE pide pass)
     ============================================================ */
