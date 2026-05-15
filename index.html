@@ -891,7 +891,20 @@
           if (cfg.wa)        window.__WA_GLOBAL    = cfg.wa;
           if (cfg.ig)        window.__IG_GLOBAL    = cfg.ig;
           if (cfg.adminPass) window.__ADMIN_PASS   = cfg.adminPass;
+          // Guardar visitas actuales para mostrarlas en el admin
+          window.__VISIT_COUNT = cfg.visitas || 0;
         }
+
+        // ── Incrementar contador de visitas ──────────────────────
+        // Usa FieldValue.increment para sumar 1 de forma atómica
+        // (seguro aunque varios usuarios entren al mismo tiempo)
+        try {
+          await db.collection('config').doc('main').set(
+            { visitas: firebase.firestore.FieldValue.increment(1) },
+            { merge: true }
+          );
+          window.__VISIT_COUNT = (window.__VISIT_COUNT || 0) + 1;
+        } catch(e) { /* Si falla el conteo, no interrumpir la carga */ }
 
         // Leer workshops
         const wSnap = await db.collection('workshops').orderBy('orden').get();
@@ -1370,7 +1383,22 @@
       <div class="login-box__logo">Vicenta</div>
       <p class="login-box__sub">Administración</p>
       <label class="login-box__label" for="admin-pass">Contraseña</label>
-      <input type="password" id="admin-pass" class="login-box__input" placeholder="••••••••" autocomplete="off"/>
+      <div style="position:relative;margin-bottom:1.2rem;">
+        <input type="password" id="admin-pass" class="login-box__input"
+          placeholder="••••••••" autocomplete="off"
+          style="margin-bottom:0;padding-right:2.8rem;"/>
+        <button type="button" id="toggle-pass-btn"
+          onclick="togglePassVisibility()"
+          style="
+            position:absolute; right:0.8rem; top:50%; transform:translateY(-50%);
+            background:none; border:none; cursor:pointer;
+            color:var(--ink-muted); font-size:1rem; padding:0.2rem;
+            line-height:1; transition:color 0.2s;
+          "
+          title="Ver/ocultar contraseña">
+          👁
+        </button>
+      </div>
       <p class="login-box__err" id="login-err">Contraseña incorrecta.</p>
       <button class="adm-btn adm-btn--primary" style="width:100%;justify-content:center;padding:.7rem;" onclick="doLogin()">Ingresar →</button>
     </div>
@@ -1385,6 +1413,9 @@
         <div class="adm__head-left">
           <span class="adm__head-title">Vicenta</span>
           <span class="adm__head-badge">🛠 Modo Admin</span>
+          <span class="adm__head-badge" id="adm-visit-count" style="background:rgba(245,201,187,0.10);">
+            👁 Visitas totales: <strong id="adm-visit-num">—</strong>
+          </span>
         </div>
         <button class="adm__close" onclick="closeAdmin()" title="Cerrar (Esc)">✕</button>
       </div>
@@ -2434,6 +2465,20 @@
       }
     });
 
+    /** Mostrar/ocultar contraseña en el login */
+    function togglePassVisibility() {
+      const inp = document.getElementById('admin-pass');
+      const btn = document.getElementById('toggle-pass-btn');
+      if (!inp) return;
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        if (btn) btn.textContent = '🙈';  // ojo cerrado = está visible
+      } else {
+        inp.type = 'password';
+        if (btn) btn.textContent = '👁';   // ojo abierto = está oculto
+      }
+    }
+
     /* ============================================================
        ADMIN — Login
     ============================================================ */
@@ -2454,9 +2499,11 @@
       const loginEl = document.getElementById('admin-login');
       const passEl  = document.getElementById('admin-pass');
       const errEl   = document.getElementById('login-err');
+      const btn     = document.getElementById('toggle-pass-btn');
       if (loginEl) loginEl.classList.remove('open');
-      if (passEl)  passEl.value = '';
+      if (passEl)  { passEl.value = ''; passEl.type = 'password'; }  // resetear tipo
       if (errEl)   errEl.classList.remove('show');
+      if (btn)     btn.textContent = '👁';  // resetear ícono del ojo
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -2503,6 +2550,14 @@
     ============================================================ */
     function openAdminPanel() {
       buildAdminUI();
+      // Mostrar contador de visitas actualizado
+      const numEl = document.getElementById('adm-visit-num');
+      if (numEl) {
+        const count = window.__VISIT_COUNT;
+        numEl.textContent = count !== undefined
+          ? count.toLocaleString('es-AR')  // formato: 1.234
+          : '—';
+      }
       const overlay = document.getElementById('admin-overlay');
       if (overlay) overlay.classList.add('open');
     }
